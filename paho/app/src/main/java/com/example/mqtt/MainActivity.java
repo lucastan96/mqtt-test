@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
@@ -16,6 +17,7 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
@@ -34,9 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private int notificationId;
     private String clientId;
     private MqttAndroidClient client;
-    private Button btnSubscribe;
-    private Button btnUnsubscribe;
-    private Button btnPublish;
+    private MqttConnectOptions options;
+    private Spinner spinnerConnection;
+    private Button btnSubscribe, btnUnsubscribe, btnPublish;
     private EditText inputHost, inputPort, inputTopicSubscribe, inputTopicPublish, inputMessage;
 
     @Override
@@ -47,8 +49,14 @@ public class MainActivity extends AppCompatActivity {
         context = this;
         notificationManager = NotificationManagerCompat.from(context);
 
+        options = new MqttConnectOptions();
+        options.setConnectionTimeout(3);
+
         clientId = MqttClient.generateClientId();
         Log.d(TAG, "onCreate: Client ID: " + clientId);
+
+        spinnerConnection = findViewById(R.id.spinner_connection);
+        spinnerConnection.setSelection(1);
 
         inputHost = findViewById(R.id.input_host);
         inputHost.setText(DEFAULT_HOST);
@@ -100,31 +108,31 @@ public class MainActivity extends AppCompatActivity {
 
     private void connect() {
         if (client == null) {
-            client = new MqttAndroidClient(this, "ws://" + inputHost.getText().toString() + ":" + inputPort.getText().toString(), clientId);
-            try {
-                client.connect().setActionCallback(new IMqttActionListener() {
-                    @Override
-                    public void onSuccess(IMqttToken asyncActionToken) {
-                        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_1_ID)
-                                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                                .setContentTitle("Connected to MQTT server")
-                                .setContentText("ws://" + inputHost.getText().toString() + ":" + inputPort.getText().toString())
-                                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                                .setCategory(NotificationCompat.CATEGORY_MESSAGE);
-                        notificationManager.notify(notificationId++, builder.build());
-                        btnSubscribe.setEnabled(true);
-                        btnUnsubscribe.setEnabled(true);
-                        btnPublish.setEnabled(true);
-                    }
+            client = new MqttAndroidClient(this, spinnerConnection.getSelectedItem().toString() + "://" + inputHost.getText().toString() + ":" + inputPort.getText().toString(), clientId);
+        }
+        try {
+            client.connect(options).setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_1_ID)
+                            .setSmallIcon(R.drawable.ic_launcher_foreground)
+                            .setContentTitle("Connected to MQTT server")
+                            .setContentText(spinnerConnection.getSelectedItem().toString() + "://" + inputHost.getText().toString() + ":" + inputPort.getText().toString())
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setCategory(NotificationCompat.CATEGORY_MESSAGE);
+                    notificationManager.notify(notificationId++, builder.build());
+                    btnSubscribe.setEnabled(true);
+                    btnUnsubscribe.setEnabled(true);
+                    btnPublish.setEnabled(true);
+                }
 
-                    @Override
-                    public void onFailure(IMqttToken asyncActionToken, Throwable e) {
-                        e.printStackTrace();
-                    }
-                });
-            } catch (MqttException e) {
-                e.printStackTrace();
-            }
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable e) {
+                    e.printStackTrace();
+                }
+            });
+        } catch (MqttException e) {
+            e.printStackTrace();
         }
     }
 

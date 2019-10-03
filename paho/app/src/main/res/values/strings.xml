@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">MQTT</string>
+    <string-array name="connection_type">
+        <item>tcp</item>
+        <item>ws</item>
+    </string-array>
 </resources>
